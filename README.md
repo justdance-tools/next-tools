@@ -2,6 +2,8 @@
 
 Next Tools will help you convert files between UAF and Next.
 
+Next games are not released yet, so the tool is currently unfinished and needs a lot of work to do. It is currently based off the early build files of Next.
+
 ## Requirements
 
 *   Node.JS (14 or higher)
