@@ -1,12 +1,12 @@
 {
   "name": "next-tools",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "yunyl",
+  "author": "jd-tools-team",
   "license": "ISC",
   "dependencies": {
     "child_process": "^1.0.2",
