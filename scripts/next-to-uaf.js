@@ -37,7 +37,7 @@ module.exports = async () => {
                     convertFile(filePath)
                     break;
                 case "folder-only":
-                    let folderPath = await ps.run("select-folder", "Select a JDNext folder!")
+                    let folderPath = await ps.run("select-folder", "Select a JDNext map folder!")
                     convertFolder(folderPath)
             }
         });
@@ -89,7 +89,12 @@ async function convertFolder(path) {
         return;
     }
 
+    // Try to find songData in the map folder
     let { mapName, songData } = findSongData(path)
+    if (!mapName) {
+        global.logger.error(`Couldn't find a song data file or a mapName from the folder, are you sure it's a valid folder or it has a songData file?`)
+        return;
+    }
     global.logger.info(`Found mapName: ${mapName}`);
 
     let outputPath = `uaf/${mapName}`
@@ -132,10 +137,6 @@ function findSongData(path) {
             return;
         }
     });
-    if (!mapName) {
-        global.logger.error(`Couldn't find a song data file or a mapName from the folder, are you sure it's a valid folder or it has a songData file?`)
-        return
-    }
     return {
         mapName, songData
     }

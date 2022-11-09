@@ -13,7 +13,12 @@ class Utils {
         let filePath = path.dirname(_path) || ""
         let fileName = path.basename(_path)
 
-        if (!content) content = JSON.parse(fs.readFileSync(_path))
+        try {
+            if (!content) content = JSON.parse(fs.readFileSync(_path))
+        }
+        catch(err) {
+            return;
+        }
         let split = fileName.split(".")
 
         if (engine === "uaf") {
@@ -28,11 +33,20 @@ class Utils {
             if (tapeTypes.includes(split[1])) isTape = true;
             if (templateTypes.includes(split[1])) isTemplate = true;
 
-            if (isCooked && isTape) return split[1]
-            if (isCooked && isTemplate) return split[1]
+            if (isCooked && isTape) {
+                if (split[1] === "dtape") return split[1]
+                else if (split[1] === "ktape") return split[1]
+                else return;
+            }
+            if (isCooked && isTemplate) {
+                if (fileName.includes("_musictrack")) return "musictrack"
+                else if (fileName.includes("songdesc")) return "songdesc"
+                else return;
+            }
         }
         else if (engine === "next") {
             if (content["m_songDesc"] && content["m_mapName"]) return "songData"
+            else return;
         }
     }
 
