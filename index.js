@@ -10,6 +10,7 @@ let welcome = `${name} by ${author} (${version})\n`
 
 console.log(welcome)
 
+// First ask user the options they can pick
 let options = [{
     type: "list",
     message: "Please select an option below.",
@@ -40,6 +41,7 @@ let options = [{
 inquirer
     .prompt(options)
     .then(r => {
+        // When a response is received, find the script's path and execute it
         let option = r.options
         
         let scriptPath = path.resolve(__dirname, "scripts", option + ".js")

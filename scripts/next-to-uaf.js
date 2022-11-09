@@ -13,6 +13,7 @@ let options = [{
     choices: [{
         name: "Convert a file only",
         value: "file-only",
+        disabled: "not available"
     }, 
     {
         name: "Convert a folder",
@@ -36,7 +37,7 @@ module.exports = async () => {
                     convertFile(filePath)
                     break;
                 case "folder-only":
-                    let folderPath = "C:\\Users\\Asus\\Desktop\\BlackWidow" //await ps.run("select-folder", "Select a JDNext folder!")
+                    let folderPath = await ps.run("select-folder", "Select a JDNext folder!")
                     convertFolder(folderPath)
             }
         });
