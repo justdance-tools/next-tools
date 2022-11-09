@@ -9,6 +9,33 @@ class Utils {
         process.exit()
     }
 
+    getFileType(engine, _path, content) {
+        let filePath = path.dirname(_path) || ""
+        let fileName = path.basename(_path)
+
+        if (!content) content = JSON.parse(fs.readFileSync(_path))
+        let split = fileName.split(".")
+
+        if (engine === "uaf") {
+            let tapeTypes = ["dtape", "ktape", "tape"]
+            let templateTypes = ["tpl"]
+            
+            let isCooked = false;
+            let isTape = false;
+            let isTemplate = false;
+
+            if (split[split.length-1] === "ckd") isCooked = true;
+            if (tapeTypes.includes(split[1])) isTape = true;
+            if (templateTypes.includes(split[1])) isTemplate = true;
+
+            if (isCooked && isTape) return split[1]
+            if (isCooked && isTemplate) return split[1]
+        }
+        else if (engine === "next") {
+            if (content["m_songDesc"] && content["m_mapName"]) return "songData"
+        }
+    }
+
     getOutputPath(_path) {
         let filePath = path.dirname(_path) || ""
         let fileName = path.basename(_path)

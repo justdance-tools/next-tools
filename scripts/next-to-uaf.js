@@ -4,6 +4,7 @@ const inquirer = require("inquirer")
 
 const ps = require("./ps")
 const utils = require("../libs/utils")
+const { parse } = require("path")
 
 // Options for file/folder selection
 let options = [{
@@ -12,8 +13,7 @@ let options = [{
     name: "options",
     choices: [{
         name: "Convert a file only",
-        value: "file-only",
-        disabled: "not available"
+        value: "file-only"
     }, 
     {
         name: "Convert a folder",
@@ -45,6 +45,39 @@ module.exports = async () => {
 
 async function convertFile(path) {
     global.logger.info(`Converting file:`, path)
+
+    let allowedTypes = ["songData"]
+    let fileType = utils.getFileType("next", path)
+    if (!fileType || !allowedTypes.includes(fileType)) {
+        global.logger.warn(`Couldn't find type of selected file, are you sure it's a Next file?`)
+        return;
+    }
+    global.logger.info(`Detected file type:`, fileType)
+
+    // If fileType is songData read file and get mapname and songdata
+    if (fileType === "songData") {
+
+        let songData = JSON.parse(fs.readFileSync(path))
+        let mapName = songData["m_mapName"] || songData["m_songDesc"]["MapName"]
+        let mapNameLower = mapName.toLowerCase()
+
+        global.logger.info(`Converting ${mapName} songData...`);
+    
+        let outputPath = `uaf/${mapName}`
+    
+        let { songDesc, danceData, karaokeData, trackData } = parseSongData(mapName, songData)
+        
+        utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData)
+        utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData)
+        utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData)
+        utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc)
+    
+        global.logger.success(`Converted all files successfully!`)
+        if (global.config.OPEN_OUTPUT_FOLDER) {
+            await ps.run("open-folder", _path.resolve(utils.getOutputPath(outputPath)[1]))
+        }
+    }
+    
 }
 
 async function convertFolder(path) {
@@ -52,10 +85,29 @@ async function convertFolder(path) {
     global.logger.info(`Converting folder:`, path)
     let stats = fs.lstatSync(path)
     if (!stats.isDirectory()) {
-        global.logger.info(`The path you provided is not a folder!`)
+        global.logger.warn(`The path you provided is not a folder!`)
         return;
     }
 
+    let { mapName, songData } = findSongData(path)
+    global.logger.info(`Found mapName: ${mapName}`);
+
+    let outputPath = `uaf/${mapName}`
+
+    let { songDesc, danceData, karaokeData, trackData } = parseSongData(mapName, songData)
+    
+    utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData)
+    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData)
+    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData)
+    utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc)
+
+    global.logger.success(`Converted all files successfully!`)
+    if (global.config.OPEN_OUTPUT_FOLDER) {
+        await ps.run("open-folder", _path.resolve(utils.getOutputPath(outputPath)[1]))
+    }
+}
+
+function findSongData(path) {
     // Since there's no current way to detect the mapName
     // (according the early build of jdnext, none of the jsons except the songdesc has the mapName mentioned)
     // (and the songdesc's filename is the mapname so we have to scan all JSONs and find the songdesc)
@@ -70,7 +122,6 @@ async function convertFolder(path) {
     });
 
     let mapName
-    let mapNameLower
     let songData = {}
     // Find song data file and assign mapName
     Object.values(jsons).forEach(d => {
@@ -85,9 +136,12 @@ async function convertFolder(path) {
         global.logger.error(`Couldn't find a song data file or a mapName from the folder, are you sure it's a valid folder or it has a songData file?`)
         return
     }
-    global.logger.info(`Found mapName, ${mapName}`);
+    return {
+        mapName, songData
+    }
+}
 
-    let outputPath = `${mapName}/uaf`
+function parseSongData(mapName, songData) {
     let {
         "m_songDesc": songDesc,
         "m_danceData": danceData,
@@ -100,15 +154,7 @@ async function convertFolder(path) {
     karaokeData = validateKaraokeData(mapName, karaokeData)
     trackData = validateTrackData(mapName, trackData)
 
-    utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData)
-    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData)
-    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData)
-    utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc)
-
-    global.logger.success(`Converted all files successfully!`)
-    if (global.config.OPEN_OUTPUT_FOLDER) {
-        await ps.run("open-folder", _path.resolve(utils.getOutputPath(outputPath)[1]))
-    }
+    return { songDesc, danceData, karaokeData, trackData }
 }
 
 function validateSongDesc(data) {
