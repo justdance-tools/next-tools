@@ -12,6 +12,11 @@ Next games are not released yet, so the tool is currently unfinished and needs a
 
 You must need Windows to use Next Tools. It's because this tool uses Powershell scripts, shell scripts (for Linux and distros) will be added in future.
 
-First, run `npm i` in CLI to install all required packages.
+First, run these commands below:
+```
+git pull https://github.com/justdance-tools/next-tools
+cd next-tools
+npm i
+```
 
-You can either run `node index.js`  in CLI or run the `run.bat` file.
+You can now either run `node index.js` in CLI or run the `run.bat` file.
