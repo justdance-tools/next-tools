@@ -60,7 +60,9 @@ class Utils {
     }
 
     writeOutput(_path, data) {
-        data = global.config.MINIFY_JSON ? JSON.stringify(data) : JSON.stringify(data, null, 2)
+        if (typeof data == Object || typeof data == Array) {
+            data = global.config.MINIFY_JSON ? JSON.stringify(data) : JSON.stringify(data, null, 2)
+        }
         let [ outputFolder, finalPath ] = this.getOutputPath(_path)
 
         fs.mkdirSync(outputFolder, { recursive: true })

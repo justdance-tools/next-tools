@@ -27,8 +27,7 @@ let options = [{
     new inquirer.Separator(), 
     {
         name: "Fix JD+ bundles",
-        value: "fix-jdp-bundles",
-        disabled: "not available"
+        value: "fix-jdp-bundles"
     },
     new inquirer.Separator(), 
     {
