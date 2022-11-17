@@ -58,7 +58,7 @@ async function convertFile(path) {
     if (fileType === "songData") {
 
         let songData = JSON.parse(fs.readFileSync(path))
-        let mapName = songData["m_mapName"] || songData["m_songDesc"]["MapName"]
+        let mapName = songData["MapName"] || songData["SongDesc"]["MapName"]
         let mapNameLower = mapName.toLowerCase()
 
         global.logger.info(`Converting ${mapName} songData...`);
@@ -67,10 +67,10 @@ async function convertFile(path) {
     
         let { songDesc, danceData, karaokeData, trackData } = parseSongData(mapName, songData)
         
-        utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData)
-        utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData)
-        utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData)
-        utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc)
+        utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData, true)
+        utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData, true)
+        utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData, true)
+        utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc, true)
     
         global.logger.success(`Converted all files successfully!`)
         if (global.config.OPEN_OUTPUT_FOLDER) {
@@ -101,10 +101,10 @@ async function convertFolder(path) {
 
     let { songDesc, danceData, karaokeData, trackData } = parseSongData(mapName, songData)
     
-    utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData)
-    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData)
-    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData)
-    utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc)
+    utils.writeOutput(`${outputPath}/audio/${mapNameLower}_musictrack.tpl.ckd`, trackData, true)
+    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_dance.dtape.ckd`, danceData, true)
+    utils.writeOutput(`${outputPath}/timeline/${mapNameLower}_tml_karaoke.ktape.ckd`, karaokeData, true)
+    utils.writeOutput(`${outputPath}/songdesc.tpl.ckd`, songDesc, true)
 
     global.logger.success(`Converted all files successfully!`)
     if (global.config.OPEN_OUTPUT_FOLDER) {
@@ -130,13 +130,27 @@ function findSongData(path) {
     let songData = {}
     // Find song data file and assign mapName
     Object.values(jsons).forEach(d => {
-        if (d["m_songDesc"]) {
+        if (d["SongDesc"]) {
             songData = d
-            mapName = d["m_mapName"] || d["m_songDesc"]["MapName"]
+            mapName = d["MapName"] || d["SongDesc"]["MapName"]
             mapNameLower = mapName.toLowerCase()
             return;
         }
     });
+
+    if (!songData["TrackData"] || (songData["TrackData"] && !songData["TrackData"]["MusicTrackStructure"])) {
+        global.logger.info(`SongData doesn't have musicTrack by default, trying to fetch the musictrack file...`)
+
+        let filePath = _path.resolve(path, "MusicTrack.json")
+        if (!fs.existsSync(filePath)) {
+            global.logger.warn(`This song does not have any MusicTrack data!`)
+        }
+        else {
+            let musicTrack = require(filePath)
+            songData.TrackData = musicTrack
+        }
+    }
+
     return {
         mapName, songData
     }
@@ -144,10 +158,10 @@ function findSongData(path) {
 
 function parseSongData(mapName, songData) {
     let {
-        "m_songDesc": songDesc,
-        "m_danceData": danceData,
-        "m_karaokeData": karaokeData, 
-        "m_trackData": trackData
+        "SongDesc": songDesc,
+        "DanceData": danceData,
+        "KaraokeData": karaokeData,
+        "TrackData": trackData
     } = songData
 
     songDesc = validateSongDesc(songDesc)
@@ -190,8 +204,44 @@ function validateSongDesc(data) {
     }
 }
 
+function validateCinematics(mapName, data) {
+
+}
+
 function validateDanceData(mapName, data) {
-    let clips = [].concat(data.MotionClips, data.PictoClips);
+    let { MotionClips, PictoClips, GoldEffectClips, HideHudClips } = data
+
+    MotionClips = MotionClips.map(c => {
+        if (!c.MoveName.includes("timeline/moves")) {
+            let extension = c.MoveType === 0 ? ".msm" : ".gesture"
+            c.ClassifierPath = `world/maps/${mapName.toLowerCase()}/timeline/moves/${c.MoveName}${extension}`
+        }
+        return {
+            __class: "MotionClip",
+            ...c
+        }
+    })
+    PictoClips = PictoClips.map(c => {
+        if (!c.PictoPath.includes("timeline/pictos")) {
+            c.PictoPath = `world/maps/${mapName.toLowerCase()}/timeline/pictos/${c.PictoPath}.png`
+        }
+        return {
+            __class: "PictogramClip",
+            ...c
+        }
+    })
+    GoldEffectClips = GoldEffectClips.map(c => {
+        return {
+            __class: "GoldEffectClip",
+            ...c
+        }
+    })
+
+    let clips = [].concat(MotionClips, PictoClips, GoldEffectClips);
+
+    if (global.config.SORT_BY_TIME) 
+        clips = clips.sort((a, b) => a.StartTime - b.StartTime);
+
     return {
         __class: "Tape",
         Clips: clips,
@@ -205,6 +255,12 @@ function validateDanceData(mapName, data) {
 
 function validateKaraokeData(mapName, data) {
     let clips = data.Clips.map(clip => clip.KaraokeClip);
+
+    clips = clips.map(c => {
+        c.__class = "KaraokeClip"
+        return c
+    })
+   
     return {
         __class: "Tape",
         Clips: clips,

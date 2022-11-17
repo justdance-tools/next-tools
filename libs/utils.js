@@ -59,8 +59,8 @@ class Utils {
         return [outputFolder, finalPath]
     }
 
-    writeOutput(_path, data) {
-        if (typeof data == Object || typeof data == Array) {
+    writeOutput(_path, data, isJson = false) {
+        if (isJson) {
             data = global.config.MINIFY_JSON ? JSON.stringify(data) : JSON.stringify(data, null, 2)
         }
         let [ outputFolder, finalPath ] = this.getOutputPath(_path)
